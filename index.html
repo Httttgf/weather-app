@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MÃ©tÃ©o App</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="weather-app" id="app">
+        <!-- Animated Background -->
+        <div class="animated-bg" id="animatedBg">
+            <div class="weather-particles" id="particles"></div>
+        </div>
+
+        <!-- API Key Modal -->
+        <div class="modal" id="apiModal">
+            <div class="modal-content">
+                <h2>ð Configuration API</h2>
+                <p>Entrez votre clÃ© API OpenWeatherMap pour commencer</p>
+                <a href="https://openweathermap.org/api" target="_blank" class="api-link">Obtenir une clÃ© gratuite â</a>
+                <input type="text" id="apiKeyInput" placeholder="Votre clÃ© API...">
+                <button id="saveApiKey" class="btn-primary">Enregistrer</button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="container">
+            <!-- Header with Search -->
+            <header class="header">
+                <div class="logo">
+                    <span class="logo-icon">âï¸</span>
+                    <span class="logo-text">MÃ©tÃ©o</span>
+                </div>
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Rechercher une ville..." autocomplete="off">
+                    <button id="searchBtn" class="search-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.35-4.35"></path>
+                        </svg>
+                    </button>
+                </div>
+                <button id="settingsBtn" class="settings-btn" title="ParamÃ¨tres API">âï¸</button>
+            </header>
+
+            <!-- Loading State -->
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Chargement des donnÃ©es mÃ©tÃ©o...</p>
+            </div>
+
+            <!-- Error State -->
+            <div class="error" id="error">
+                <span class="error-icon">â ï¸</span>
+                <p id="errorMessage">Ville non trouvÃ©e</p>
+                <button id="retryBtn" class="btn-secondary">RÃ©essayer</button>
+            </div>
+
+            <!-- Weather Content -->
+            <main class="weather-content" id="weatherContent">
+                <!-- Current Weather -->
+                <section class="current-weather">
+                    <div class="location">
+                        <h1 id="cityName">--</h1>
+                        <p id="date">--</p>
+                    </div>
+                    <div class="weather-main">
+                        <div class="weather-icon-container">
+                            <img id="weatherIcon" src="" alt="Weather icon" class="weather-icon">
+                        </div>
+                        <div class="temperature">
+                            <span id="temp" class="temp-value">--</span>
+                            <span class="temp-unit">Â°C</span>
+                        </div>
+                    </div>
+                    <p id="description" class="description">--</p>
+                    
+                    <!-- Weather Details -->
+                    <div class="weather-details">
+                        <div class="detail-card">
+                            <div class="detail-icon">ð§</div>
+                            <div class="detail-info">
+                                <span class="detail-value" id="humidity">--</span>
+                                <span class="detail-label">HumiditÃ©</span>
+                            </div>
+                        </div>
+                        <div class="detail-card">
+                            <div class="detail-icon">ð¨</div>
+                            <div class="detail-info">
+                                <span class="detail-value" id="wind">--</span>
+                                <span class="detail-label">Vent</span>
+                            </div>
+                        </div>
+                        <div class="detail-card">
+                            <div class="detail-icon">ð¡ï¸</div>
+                            <div class="detail-info">
+                                <span class="detail-value" id="feelsLike">--</span>
+                                <span class="detail-label">Ressenti</span>
+                            </div>
+                        </div>
+                        <div class="detail-card">
+                            <div class="detail-icon">ðï¸</div>
+                            <div class="detail-info">
+                                <span class="detail-value" id="visibility">--</span>
+                                <span class="detail-label">VisibilitÃ©</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5-Day Forecast -->
+                <section class="forecast">
+                    <h2 class="forecast-title">PrÃ©visions sur 5 jours</h2>
+                    <div class="forecast-cards" id="forecastCards">
+                        <!-- Cards will be generated by JS -->
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
