@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MÃ©tÃ©o App</title>
+    <title>Meteo App - Previsions Meteo</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,111 +16,284 @@
             <div class="weather-particles" id="particles"></div>
         </div>
 
+        <!-- Premium Banner (hidden for premium users) -->
+        <div class="premium-banner" id="premiumBanner">
+            <span>Passez a Premium pour 14 jours de previsions et sans pubs!</span>
+            <button class="btn-premium-small" onclick="openPremiumModal()">Decouvrir</button>
+        </div>
+
         <!-- API Key Modal -->
         <div class="modal" id="apiModal">
             <div class="modal-content">
-                <h2>ð Configuration API</h2>
-                <p>Entrez votre clÃ© API OpenWeatherMap pour commencer</p>
-                <a href="https://openweathermap.org/api" target="_blank" class="api-link">Obtenir une clÃ© gratuite â</a>
-                <input type="text" id="apiKeyInput" placeholder="Votre clÃ© API...">
+                <h2>Configuration API</h2>
+                <p>Entrez votre cle API OpenWeatherMap pour commencer</p>
+                <a href="https://openweathermap.org/api" target="_blank" class="api-link">Obtenir une cle gratuite</a>
+                <input type="text" id="apiKeyInput" placeholder="Votre cle API...">
                 <button id="saveApiKey" class="btn-primary">Enregistrer</button>
             </div>
         </div>
 
-        <!-- Main Content -->
-        <div class="container">
-            <!-- Header with Search -->
-            <header class="header">
-                <div class="logo">
-                    <span class="logo-icon">âï¸</span>
-                    <span class="logo-text">MÃ©tÃ©o</span>
+        <!-- Premium Modal -->
+        <div class="modal" id="premiumModal">
+            <div class="modal-content premium-modal-content">
+                <button class="modal-close" onclick="closePremiumModal()">&times;</button>
+                <div class="premium-header">
+                    <div class="premium-icon">&#9733;</div>
+                    <h2>Passez a Premium</h2>
+                    <p class="premium-tagline">Debloquez toute la puissance de Meteo App</p>
                 </div>
-                <div class="search-box">
-                    <input type="text" id="searchInput" placeholder="Rechercher une ville..." autocomplete="off">
-                    <button id="searchBtn" class="search-btn">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="11" cy="11" r="8"></circle>
-                            <path d="m21 21-4.35-4.35"></path>
-                        </svg>
-                    </button>
+                
+                <div class="plan-comparison">
+                    <div class="plan-card plan-free">
+                        <h3>Gratuit</h3>
+                        <div class="plan-price">0 EUR<span>/mois</span></div>
+                        <ul class="plan-features">
+                            <li class="feature-included">Meteo actuelle</li>
+                            <li class="feature-included">Previsions 5 jours</li>
+                            <li class="feature-included">Animations meteo</li>
+                            <li class="feature-excluded">Previsions 14 jours</li>
+                            <li class="feature-excluded">Alertes personnalisees</li>
+                            <li class="feature-excluded">Sans publicites</li>
+                        </ul>
+                        <button class="btn-current" disabled>Plan actuel</button>
+                    </div>
+                    
+                    <div class="plan-card plan-premium featured">
+                        <div class="popular-badge">Populaire</div>
+                        <h3>Premium</h3>
+                        <div class="plan-price">4.99 EUR<span>/mois</span></div>
+                        <ul class="plan-features">
+                            <li class="feature-included">Meteo actuelle</li>
+                            <li class="feature-included">Previsions 5 jours</li>
+                            <li class="feature-included">Animations meteo</li>
+                            <li class="feature-included">Previsions 14 jours</li>
+                            <li class="feature-included">Alertes personnalisees</li>
+                            <li class="feature-included">Sans publicites</li>
+                        </ul>
+                        <button class="btn-upgrade" onclick="upgradeToPremium()">Passer a Premium</button>
+                    </div>
                 </div>
-                <button id="settingsBtn" class="settings-btn" title="ParamÃ¨tres API">âï¸</button>
-            </header>
+                
+                <!-- Stripe Integration Placeholder -->
+                <div class="stripe-placeholder">
+                    <p><strong>Integration Stripe</strong></p>
+                    <p>Pour activer les paiements, integrez Stripe Checkout ici:</p>
+                    <code>
+// 1. Ajoutez le script Stripe
+// &lt;script src="https://js.stripe.com/v3/"&gt;&lt;/script&gt;
 
-            <!-- Loading State -->
-            <div class="loading" id="loading">
-                <div class="spinner"></div>
-                <p>Chargement des donnÃ©es mÃ©tÃ©o...</p>
+// 2. Configurez votre cle publique Stripe
+// const stripe = Stripe('pk_test_VOTRE_CLE_PUBLIQUE');
+
+// 3. Creez une session checkout cote serveur
+// et redirigez vers stripe.redirectToCheckout()
+                    </code>
+                </div>
             </div>
+        </div>
 
-            <!-- Error State -->
-            <div class="error" id="error">
-                <span class="error-icon">â ï¸</span>
-                <p id="errorMessage">Ville non trouvÃ©e</p>
-                <button id="retryBtn" class="btn-secondary">RÃ©essayer</button>
+        <!-- Weather Alerts Modal (Premium) -->
+        <div class="modal" id="alertsModal">
+            <div class="modal-content alerts-modal-content">
+                <button class="modal-close" onclick="closeAlertsModal()">&times;</button>
+                <h2>Alertes Meteo Personnalisees</h2>
+                <p class="premium-only-badge">Fonctionnalite Premium</p>
+                
+                <div class="alerts-config">
+                    <div class="alert-option">
+                        <label>
+                            <input type="checkbox" id="alertRain"> 
+                            Alerte pluie
+                        </label>
+                        <span class="alert-desc">Notification si pluie prevue</span>
+                    </div>
+                    <div class="alert-option">
+                        <label>
+                            <input type="checkbox" id="alertTemp">
+                            Alerte temperature extreme
+                        </label>
+                        <input type="number" id="alertTempMin" placeholder="Min C" class="temp-input">
+                        <input type="number" id="alertTempMax" placeholder="Max C" class="temp-input">
+                    </div>
+                    <div class="alert-option">
+                        <label>
+                            <input type="checkbox" id="alertWind">
+                            Alerte vent fort
+                        </label>
+                        <span class="alert-desc">Notification si vent > 50 km/h</span>
+                    </div>
+                    <div class="alert-option">
+                        <label>
+                            <input type="checkbox" id="alertSnow">
+                            Alerte neige
+                        </label>
+                        <span class="alert-desc">Notification si neige prevue</span>
+                    </div>
+                </div>
+                
+                <button class="btn-primary" onclick="saveAlerts()">Sauvegarder les alertes</button>
             </div>
+        </div>
 
-            <!-- Weather Content -->
-            <main class="weather-content" id="weatherContent">
-                <!-- Current Weather -->
-                <section class="current-weather">
-                    <div class="location">
-                        <h1 id="cityName">--</h1>
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-left">
+                <h1 class="logo">Meteo App</h1>
+                <!-- Buy Me a Coffee Button -->
+                <a href="https://www.buymeacoffee.com/VOTRE_USERNAME" target="_blank" class="bmc-button" title="Soutenez le projet!">
+                    <span class="bmc-icon">&#9749;</span>
+                    <span class="bmc-text">Buy me a coffee</span>
+                </a>
+            </div>
+            <div class="header-actions">
+                <button class="btn-alerts" id="alertsBtn" onclick="openAlertsModal()" title="Alertes meteo">
+                    <span class="bell-icon">&#128276;</span>
+                    <span class="premium-badge-small">PRO</span>
+                </button>
+                <button class="btn-premium" id="premiumBtn" onclick="openPremiumModal()">
+                    <span class="star-icon">&#9733;</span> Premium
+                </button>
+                <button class="btn-settings" id="settingsBtn" title="Parametres API">
+                    <span class="settings-icon">&#9881;</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Search Section -->
+        <section class="search-section">
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="Rechercher une ville..." autocomplete="off">
+                <button id="searchBtn" class="btn-search">
+                    <span class="search-icon">&#128269;</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Loading State -->
+        <div class="loading" id="loading">
+            <div class="loading-spinner"></div>
+            <p>Chargement des donnees meteo...</p>
+        </div>
+
+        <!-- Error State -->
+        <div class="error-state" id="error">
+            <div class="error-icon">&#9888;</div>
+            <p id="errorMessage">Une erreur est survenue</p>
+            <button id="retryBtn" class="btn-primary">Reessayer</button>
+        </div>
+
+        <!-- Weather Content -->
+        <main class="weather-content" id="weatherContent">
+            <!-- Current Weather -->
+            <section class="current-weather">
+                <div class="weather-main">
+                    <div class="location-info">
+                        <h2 id="cityName">--</h2>
                         <p id="date">--</p>
                     </div>
-                    <div class="weather-main">
-                        <div class="weather-icon-container">
-                            <img id="weatherIcon" src="" alt="Weather icon" class="weather-icon">
-                        </div>
-                        <div class="temperature">
-                            <span id="temp" class="temp-value">--</span>
-                            <span class="temp-unit">Â°C</span>
+                    <div class="weather-display">
+                        <img id="weatherIcon" src="" alt="Meteo" class="weather-icon-large">
+                        <div class="temperature-display">
+                            <span id="temperature" class="temp-value">--</span>
+                            <span class="temp-unit">C</span>
                         </div>
                     </div>
-                    <p id="description" class="description">--</p>
-                    
-                    <!-- Weather Details -->
-                    <div class="weather-details">
-                        <div class="detail-card">
-                            <div class="detail-icon">ð§</div>
-                            <div class="detail-info">
-                                <span class="detail-value" id="humidity">--</span>
-                                <span class="detail-label">HumiditÃ©</span>
-                            </div>
-                        </div>
-                        <div class="detail-card">
-                            <div class="detail-icon">ð¨</div>
-                            <div class="detail-info">
-                                <span class="detail-value" id="wind">--</span>
-                                <span class="detail-label">Vent</span>
-                            </div>
-                        </div>
-                        <div class="detail-card">
-                            <div class="detail-icon">ð¡ï¸</div>
-                            <div class="detail-info">
-                                <span class="detail-value" id="feelsLike">--</span>
-                                <span class="detail-label">Ressenti</span>
-                            </div>
-                        </div>
-                        <div class="detail-card">
-                            <div class="detail-icon">ðï¸</div>
-                            <div class="detail-info">
-                                <span class="detail-value" id="visibility">--</span>
-                                <span class="detail-label">VisibilitÃ©</span>
-                            </div>
+                    <p id="description" class="weather-description">--</p>
+                </div>
+                
+                <div class="weather-details">
+                    <div class="detail-card">
+                        <span class="detail-icon">&#128167;</span>
+                        <div class="detail-info">
+                            <span class="detail-value" id="humidity">--%</span>
+                            <span class="detail-label">Humidite</span>
                         </div>
                     </div>
-                </section>
+                    <div class="detail-card">
+                        <span class="detail-icon">&#127744;</span>
+                        <div class="detail-info">
+                            <span class="detail-value" id="wind">-- km/h</span>
+                            <span class="detail-label">Vent</span>
+                        </div>
+                    </div>
+                    <div class="detail-card">
+                        <span class="detail-icon">&#127777;</span>
+                        <div class="detail-info">
+                            <span class="detail-value" id="feelsLike">--C</span>
+                            <span class="detail-label">Ressenti</span>
+                        </div>
+                    </div>
+                    <div class="detail-card">
+                        <span class="detail-icon">&#128065;</span>
+                        <div class="detail-info">
+                            <span class="detail-value" id="visibility">-- km</span>
+                            <span class="detail-label">Visibilite</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
-                <!-- 5-Day Forecast -->
-                <section class="forecast">
-                    <h2 class="forecast-title">PrÃ©visions sur 5 jours</h2>
-                    <div class="forecast-cards" id="forecastCards">
-                        <!-- Cards will be generated by JS -->
-                    </div>
-                </section>
-            </main>
-        </div>
+            <!-- 5-Day Forecast -->
+            <section class="forecast-section">
+                <h3>Previsions 5 jours</h3>
+                <div class="forecast-container" id="forecastContainer">
+                    <!-- Forecast cards inserted by JS -->
+                </div>
+            </section>
+
+            <!-- 14-Day Forecast (Premium) -->
+            <section class="forecast-section forecast-extended" id="extendedForecast">
+                <div class="premium-section-header">
+                    <h3>Previsions 14 jours</h3>
+                    <span class="premium-only-badge">Premium</span>
+                </div>
+                <div class="premium-locked" id="extendedForecastLocked">
+                    <div class="lock-icon">&#128274;</div>
+                    <p>Debloquez les previsions a 14 jours avec Premium</p>
+                    <button class="btn-premium-small" onclick="openPremiumModal()">Passer a Premium</button>
+                </div>
+                <div class="forecast-container forecast-extended-container" id="extendedForecastContainer" style="display: none;">
+                    <!-- Extended forecast cards inserted by JS for premium users -->
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer with AdSense -->
+        <footer class="app-footer">
+            <div class="footer-content">
+                <p>Donnees fournies par <a href="https://openweathermap.org/" target="_blank">OpenWeatherMap</a></p>
+                <div class="footer-links">
+                    <a href="#" onclick="openPremiumModal(); return false;">Premium</a>
+                    <a href="https://www.buymeacoffee.com/VOTRE_USERNAME" target="_blank">Nous soutenir</a>
+                </div>
+            </div>
+            
+            <!-- Google AdSense Banner Placeholder -->
+            <div class="adsense-container" id="adsenseContainer">
+                <div class="adsense-placeholder">
+                    <p><strong>Espace publicitaire Google AdSense</strong></p>
+                    <p>Pour afficher une banniere publicitaire ici:</p>
+                    <ol>
+                        <li>Creez un compte <a href="https://www.google.com/adsense/" target="_blank">Google AdSense</a></li>
+                        <li>Obtenez votre code d'annonce</li>
+                        <li>Remplacez ce placeholder par votre code:</li>
+                    </ol>
+                    <code>
+&lt;script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-VOTRE_ID"
+     crossorigin="anonymous"&gt;&lt;/script&gt;
+&lt;ins class="adsbygoogle"
+     style="display:block"
+     data-ad-client="ca-pub-VOTRE_ID"
+     data-ad-slot="VOTRE_SLOT_ID"
+     data-ad-format="auto"
+     data-full-width-responsive="true"&gt;&lt;/ins&gt;
+&lt;script&gt;
+     (adsbygoogle = window.adsbygoogle || []).push({});
+&lt;/script&gt;
+                    </code>
+                </div>
+            </div>
+        </footer>
     </div>
 
     <script src="app.js"></script>
