@@ -1,5 +1,5 @@
 /* =============================================
-   WEATHER APP - JAVASCRIPT
+   WEATHER APP - JAVASCRIPT WITH MONETIZATION
    ============================================= */
 
 class WeatherApp {
@@ -7,6 +7,7 @@ class WeatherApp {
         this.apiKey = localStorage.getItem('openweather_api_key') || '';
         this.baseUrl = 'https://api.openweathermap.org/data/2.5';
         this.iconUrl = 'https://openweathermap.org/img/wn';
+        this.isPremium = localStorage.getItem('weather_app_premium') === 'true';
         
         // DOM Elements
         this.elements = {
@@ -25,58 +26,85 @@ class WeatherApp {
             cityName: document.getElementById('cityName'),
             date: document.getElementById('date'),
             weatherIcon: document.getElementById('weatherIcon'),
-            temp: document.getElementById('temp'),
+            temperature: document.getElementById('temperature'),
             description: document.getElementById('description'),
             humidity: document.getElementById('humidity'),
             wind: document.getElementById('wind'),
             feelsLike: document.getElementById('feelsLike'),
             visibility: document.getElementById('visibility'),
-            forecastCards: document.getElementById('forecastCards'),
+            forecastContainer: document.getElementById('forecastContainer'),
             animatedBg: document.getElementById('animatedBg'),
-            particles: document.getElementById('particles')
+            particles: document.getElementById('particles'),
+            // Premium elements
+            premiumBanner: document.getElementById('premiumBanner'),
+            premiumModal: document.getElementById('premiumModal'),
+            alertsModal: document.getElementById('alertsModal'),
+            extendedForecast: document.getElementById('extendedForecast'),
+            extendedForecastLocked: document.getElementById('extendedForecastLocked'),
+            extendedForecastContainer: document.getElementById('extendedForecastContainer'),
+            adsenseContainer: document.getElementById('adsenseContainer')
         };
         
-        this.currentCity = localStorage.getItem('lastCity') || 'Paris';
+        this.currentCity = localStorage.getItem('weather_last_city') || 'Paris';
+        this.weatherData = null;
+        
         this.init();
     }
     
     init() {
         this.bindEvents();
+        this.checkPremiumStatus();
         
         if (!this.apiKey) {
-            this.showModal();
+            this.showApiModal();
         } else {
             this.fetchWeather(this.currentCity);
         }
     }
     
     bindEvents() {
-        // API Key Modal
+        // API Key events
         this.elements.saveApiKey.addEventListener('click', () => this.saveApiKey());
         this.elements.apiKeyInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.saveApiKey();
         });
+        this.elements.settingsBtn.addEventListener('click', () => this.showApiModal());
         
-        // Settings
-        this.elements.settingsBtn.addEventListener('click', () => this.showModal());
-        
-        // Search
-        this.elements.searchBtn.addEventListener('click', () => this.search());
+        // Search events
+        this.elements.searchBtn.addEventListener('click', () => this.handleSearch());
         this.elements.searchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.search();
+            if (e.key === 'Enter') this.handleSearch();
         });
         
-        // Retry
+        // Retry button
         this.elements.retryBtn.addEventListener('click', () => this.fetchWeather(this.currentCity));
+        
+        // Close modals on outside click
+        window.addEventListener('click', (e) => {
+            if (e.target === this.elements.premiumModal) {
+                closePremiumModal();
+            }
+            if (e.target === this.elements.alertsModal) {
+                closeAlertsModal();
+            }
+        });
     }
     
-    showModal() {
+    checkPremiumStatus() {
+        if (this.isPremium) {
+            document.body.classList.add('is-premium');
+        } else {
+            document.body.classList.remove('is-premium');
+        }
+    }
+    
+    showApiModal() {
         this.elements.apiModal.classList.add('active');
         this.elements.apiKeyInput.value = this.apiKey;
         this.elements.apiKeyInput.focus();
     }
     
-    hideModal() {
+    hideApiModal() {
         this.elements.apiModal.classList.remove('active');
     }
     
@@ -85,12 +113,12 @@ class WeatherApp {
         if (key) {
             this.apiKey = key;
             localStorage.setItem('openweather_api_key', key);
-            this.hideModal();
+            this.hideApiModal();
             this.fetchWeather(this.currentCity);
         }
     }
     
-    search() {
+    handleSearch() {
         const city = this.elements.searchInput.value.trim();
         if (city) {
             this.fetchWeather(city);
@@ -103,230 +131,354 @@ class WeatherApp {
         this.elements.weatherContent.classList.remove('active');
     }
     
-    showError(message) {
+    hideLoading() {
         this.elements.loading.classList.remove('active');
-        this.elements.error.classList.add('active');
-        this.elements.weatherContent.classList.remove('active');
-        this.elements.errorMessage.textContent = message;
     }
     
-    showContent() {
+    showError(message) {
+        this.elements.error.classList.add('active');
+        this.elements.errorMessage.textContent = message;
+        this.elements.loading.classList.remove('active');
+        this.elements.weatherContent.classList.remove('active');
+    }
+    
+    showWeather() {
+        this.elements.weatherContent.classList.add('active');
         this.elements.loading.classList.remove('active');
         this.elements.error.classList.remove('active');
-        this.elements.weatherContent.classList.add('active');
     }
     
     async fetchWeather(city) {
-        if (!this.apiKey) {
-            this.showModal();
-            return;
-        }
-        
         this.showLoading();
         
         try {
             // Fetch current weather
             const currentResponse = await fetch(
-                `${this.baseUrl}/weather?q=${encodeURIComponent(city)}&appid=${this.apiKey}&units=metric&lang=fr`
+                `${this.baseUrl}/weather?q=${encodeURIComponent(city)}&units=metric&lang=fr&appid=${this.apiKey}`
             );
             
             if (!currentResponse.ok) {
                 if (currentResponse.status === 401) {
-                    throw new Error('ClÃ© API invalide. VÃ©rifiez vos paramÃ¨tres.');
+                    throw new Error('Cle API invalide. Veuillez verifier vos parametres.');
                 } else if (currentResponse.status === 404) {
-                    throw new Error('Ville non trouvÃ©e. VÃ©rifiez l\'orthographe.');
+                    throw new Error('Ville non trouvee. Verifiez l\'orthographe.');
                 }
-                throw new Error('Erreur lors de la rÃ©cupÃ©ration des donnÃ©es.');
+                throw new Error('Erreur lors de la recuperation des donnees.');
             }
             
             const currentData = await currentResponse.json();
             
-            // Fetch 5-day forecast
+            // Fetch forecast
             const forecastResponse = await fetch(
-                `${this.baseUrl}/forecast?q=${encodeURIComponent(city)}&appid=${this.apiKey}&units=metric&lang=fr`
+                `${this.baseUrl}/forecast?q=${encodeURIComponent(city)}&units=metric&lang=fr&appid=${this.apiKey}`
             );
             
             if (!forecastResponse.ok) {
-                throw new Error('Erreur lors de la rÃ©cupÃ©ration des prÃ©visions.');
+                throw new Error('Erreur lors de la recuperation des previsions.');
             }
             
             const forecastData = await forecastResponse.json();
             
-            // Update UI
-            this.updateCurrentWeather(currentData);
-            this.updateForecast(forecastData);
-            this.updateBackground(currentData);
-            
-            // Save last searched city
+            this.weatherData = { current: currentData, forecast: forecastData };
             this.currentCity = city;
-            localStorage.setItem('lastCity', city);
+            localStorage.setItem('weather_last_city', city);
             
-            this.showContent();
+            this.updateUI();
+            this.updateBackground(currentData.weather[0].main, currentData.sys);
+            this.showWeather();
             
         } catch (error) {
-            console.error('Weather fetch error:', error);
             this.showError(error.message);
         }
     }
     
-    updateCurrentWeather(data) {
-        const { name, sys, main, weather, wind, visibility } = data;
+    updateUI() {
+        const { current, forecast } = this.weatherData;
         
-        // Location
-        this.elements.cityName.textContent = `${name}, ${sys.country}`;
+        // Update current weather
+        this.elements.cityName.textContent = `${current.name}, ${current.sys.country}`;
         this.elements.date.textContent = this.formatDate(new Date());
+        this.elements.weatherIcon.src = `${this.iconUrl}/${current.weather[0].icon}@4x.png`;
+        this.elements.weatherIcon.alt = current.weather[0].description;
+        this.elements.temperature.textContent = Math.round(current.main.temp);
+        this.elements.description.textContent = current.weather[0].description;
+        this.elements.humidity.textContent = `${current.main.humidity}%`;
+        this.elements.wind.textContent = `${Math.round(current.wind.speed * 3.6)} km/h`;
+        this.elements.feelsLike.textContent = `${Math.round(current.main.feels_like)}C`;
+        this.elements.visibility.textContent = `${(current.visibility / 1000).toFixed(1)} km`;
         
-        // Weather
-        this.elements.weatherIcon.src = `${this.iconUrl}/${weather[0].icon}@4x.png`;
-        this.elements.weatherIcon.alt = weather[0].description;
-        this.elements.temp.textContent = Math.round(main.temp);
-        this.elements.description.textContent = weather[0].description;
+        // Update 5-day forecast
+        this.updateForecast(forecast);
         
-        // Details
-        this.elements.humidity.textContent = `${main.humidity}%`;
-        this.elements.wind.textContent = `${Math.round(wind.speed * 3.6)} km/h`;
-        this.elements.feelsLike.textContent = `${Math.round(main.feels_like)}Â°C`;
-        this.elements.visibility.textContent = `${Math.round(visibility / 1000)} km`;
+        // Update extended forecast for premium users
+        if (this.isPremium) {
+            this.updateExtendedForecast(forecast);
+        }
     }
     
-    updateForecast(data) {
-        // Get one forecast per day (at noon)
-        const dailyForecasts = this.getDailyForecasts(data.list);
+    updateForecast(forecastData) {
+        const dailyForecasts = this.groupForecastByDay(forecastData.list);
         
-        this.elements.forecastCards.innerHTML = dailyForecasts.map(day => `
+        this.elements.forecastContainer.innerHTML = dailyForecasts.slice(0, 5).map(day => `
             <div class="forecast-card">
-                <div class="forecast-day">${this.formatDayName(new Date(day.dt * 1000))}</div>
+                <div class="forecast-day">${this.formatDayShort(new Date(day.dt * 1000))}</div>
                 <img class="forecast-icon" src="${this.iconUrl}/${day.weather[0].icon}@2x.png" alt="${day.weather[0].description}">
                 <div class="forecast-temp">
-                    <span class="temp-high">${Math.round(day.main.temp_max)}Â°</span>
-                    <span class="temp-low">${Math.round(day.main.temp_min)}Â°</span>
+                    ${Math.round(day.main.temp_max)}C
+                    <span class="forecast-temp-min">${Math.round(day.main.temp_min)}C</span>
                 </div>
             </div>
         `).join('');
     }
     
-    getDailyForecasts(list) {
-        const dailyData = {};
+    updateExtendedForecast(forecastData) {
+        // Simulate 14-day forecast (API only provides 5 days, this would need a different API for real 14-day data)
+        const dailyForecasts = this.groupForecastByDay(forecastData.list);
         
+        // For demo purposes, we repeat and slightly modify the existing data
+        const extendedData = [];
+        for (let i = 0; i < 14; i++) {
+            const sourceDay = dailyForecasts[i % dailyForecasts.length];
+            const newDate = new Date();
+            newDate.setDate(newDate.getDate() + i + 6); // Start after 5-day forecast
+            extendedData.push({
+                ...sourceDay,
+                dt: newDate.getTime() / 1000,
+                main: {
+                    ...sourceDay.main,
+                    temp_max: sourceDay.main.temp_max + (Math.random() * 4 - 2),
+                    temp_min: sourceDay.main.temp_min + (Math.random() * 4 - 2)
+                }
+            });
+        }
+        
+        this.elements.extendedForecastContainer.innerHTML = extendedData.slice(0, 9).map(day => `
+            <div class="forecast-card">
+                <div class="forecast-day">${this.formatDayShort(new Date(day.dt * 1000))}</div>
+                <img class="forecast-icon" src="${this.iconUrl}/${day.weather[0].icon}@2x.png" alt="${day.weather[0].description}">
+                <div class="forecast-temp">
+                    ${Math.round(day.main.temp_max)}C
+                    <span class="forecast-temp-min">${Math.round(day.main.temp_min)}C</span>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    groupForecastByDay(list) {
+        const days = {};
         list.forEach(item => {
             const date = new Date(item.dt * 1000).toDateString();
-            if (!dailyData[date]) {
-                dailyData[date] = item;
+            if (!days[date]) {
+                days[date] = item;
+            } else {
+                days[date].main.temp_max = Math.max(days[date].main.temp_max, item.main.temp_max);
+                days[date].main.temp_min = Math.min(days[date].main.temp_min, item.main.temp_min);
             }
         });
-        
-        // Return next 5 days (skip today)
-        return Object.values(dailyData).slice(1, 6);
-    }
-    
-    updateBackground(data) {
-        const weatherMain = data.weather[0].main.toLowerCase();
-        const icon = data.weather[0].icon;
-        const isNight = icon.includes('n');
-        
-        // Remove all weather classes
-        document.body.classList.remove('sunny', 'cloudy', 'rainy', 'stormy', 'snowy', 'night');
-        
-        // Clear particles
-        this.elements.particles.innerHTML = '';
-        
-        // Add appropriate class and particles
-        if (isNight) {
-            document.body.classList.add('night');
-            this.createStars();
-        } else if (weatherMain.includes('rain') || weatherMain.includes('drizzle')) {
-            document.body.classList.add('rainy');
-            this.createRain();
-        } else if (weatherMain.includes('snow')) {
-            document.body.classList.add('snowy');
-            this.createSnow();
-        } else if (weatherMain.includes('thunder') || weatherMain.includes('storm')) {
-            document.body.classList.add('stormy');
-            this.createRain();
-        } else if (weatherMain.includes('cloud') || weatherMain.includes('mist') || weatherMain.includes('fog')) {
-            document.body.classList.add('cloudy');
-            this.createClouds();
-        } else {
-            document.body.classList.add('sunny');
-            this.createSunRays();
-        }
-    }
-    
-    createRain() {
-        for (let i = 0; i < 100; i++) {
-            const drop = document.createElement('div');
-            drop.className = 'rain-drop';
-            drop.style.left = Math.random() * 100 + '%';
-            drop.style.animationDelay = Math.random() * 2 + 's';
-            drop.style.animationDuration = (0.5 + Math.random() * 0.3) + 's';
-            this.elements.particles.appendChild(drop);
-        }
-    }
-    
-    createSnow() {
-        for (let i = 0; i < 50; i++) {
-            const flake = document.createElement('div');
-            flake.className = 'snowflake';
-            flake.style.left = Math.random() * 100 + '%';
-            flake.style.width = (5 + Math.random() * 10) + 'px';
-            flake.style.height = flake.style.width;
-            flake.style.animationDelay = Math.random() * 5 + 's';
-            flake.style.animationDuration = (3 + Math.random() * 4) + 's';
-            this.elements.particles.appendChild(flake);
-        }
-    }
-    
-    createClouds() {
-        for (let i = 0; i < 5; i++) {
-            const cloud = document.createElement('div');
-            cloud.className = 'cloud';
-            cloud.style.width = (100 + Math.random() * 200) + 'px';
-            cloud.style.height = (50 + Math.random() * 100) + 'px';
-            cloud.style.left = Math.random() * 100 + '%';
-            cloud.style.top = Math.random() * 50 + '%';
-            cloud.style.animationDelay = Math.random() * 10 + 's';
-            this.elements.particles.appendChild(cloud);
-        }
-    }
-    
-    createSunRays() {
-        const ray = document.createElement('div');
-        ray.className = 'sun-ray';
-        this.elements.particles.appendChild(ray);
-    }
-    
-    createStars() {
-        for (let i = 0; i < 100; i++) {
-            const star = document.createElement('div');
-            star.className = 'snowflake';
-            star.style.left = Math.random() * 100 + '%';
-            star.style.top = Math.random() * 100 + '%';
-            star.style.width = (1 + Math.random() * 3) + 'px';
-            star.style.height = star.style.width;
-            star.style.animation = 'none';
-            star.style.opacity = Math.random();
-            this.elements.particles.appendChild(star);
-        }
+        return Object.values(days);
     }
     
     formatDate(date) {
-        const options = { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        };
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
         return date.toLocaleDateString('fr-FR', options);
     }
     
-    formatDayName(date) {
-        return date.toLocaleDateString('fr-FR', { weekday: 'short' });
+    formatDayShort(date) {
+        return date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' });
+    }
+    
+    updateBackground(weatherMain, sys) {
+        const now = Date.now() / 1000;
+        const isNight = now < sys.sunrise || now > sys.sunset;
+        
+        let gradient = '--sunny';
+        let particleType = 'sun';
+        
+        if (isNight) {
+            gradient = '--night';
+            particleType = 'stars';
+        } else {
+            switch (weatherMain.toLowerCase()) {
+                case 'clear':
+                    gradient = '--sunny';
+                    particleType = 'sun';
+                    break;
+                case 'clouds':
+                    gradient = '--cloudy';
+                    particleType = 'clouds';
+                    break;
+                case 'rain':
+                case 'drizzle':
+                    gradient = '--rainy';
+                    particleType = 'rain';
+                    break;
+                case 'thunderstorm':
+                    gradient = '--stormy';
+                    particleType = 'lightning';
+                    break;
+                case 'snow':
+                    gradient = '--snowy';
+                    particleType = 'snow';
+                    break;
+                default:
+                    gradient = '--sunny';
+            }
+        }
+        
+        document.body.style.background = `var(${gradient})`;
+        this.createParticles(particleType);
+    }
+    
+    createParticles(type) {
+        this.elements.particles.innerHTML = '';
+        
+        const particleCount = type === 'rain' ? 100 : type === 'snow' ? 50 : 20;
+        
+        for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            particle.className = `particle particle-${type}`;
+            particle.style.left = `${Math.random() * 100}%`;
+            particle.style.animationDelay = `${Math.random() * 5}s`;
+            particle.style.animationDuration = `${3 + Math.random() * 4}s`;
+            
+            if (type === 'stars') {
+                particle.style.top = `${Math.random() * 100}%`;
+            }
+            
+            this.elements.particles.appendChild(particle);
+        }
     }
 }
 
-// Initialize app when DOM is ready
+// Premium Modal Functions
+function openPremiumModal() {
+    document.getElementById('premiumModal').classList.add('active');
+}
+
+function closePremiumModal() {
+    document.getElementById('premiumModal').classList.remove('active');
+}
+
+function upgradeToPremium() {
+    // Placeholder for Stripe integration
+    alert('Integration Stripe requise.\n\nPour activer les paiements:\n1. Creez un compte Stripe\n2. Configurez Stripe Checkout\n3. Implementez la logique de paiement\n\nVoir les instructions dans le modal.');
+}
+
+// Alerts Modal Functions
+function openAlertsModal() {
+    const isPremium = localStorage.getItem('weather_app_premium') === 'true';
+    if (!isPremium) {
+        openPremiumModal();
+        return;
+    }
+    document.getElementById('alertsModal').classList.add('active');
+}
+
+function closeAlertsModal() {
+    document.getElementById('alertsModal').classList.remove('active');
+}
+
+function saveAlerts() {
+    const alerts = {
+        rain: document.getElementById('alertRain').checked,
+        temp: document.getElementById('alertTemp').checked,
+        tempMin: document.getElementById('alertTempMin').value,
+        tempMax: document.getElementById('alertTempMax').value,
+        wind: document.getElementById('alertWind').checked,
+        snow: document.getElementById('alertSnow').checked
+    };
+    
+    localStorage.setItem('weather_alerts', JSON.stringify(alerts));
+    alert('Alertes sauvegardees!\n\nNote: L\'envoi de notifications necessite une implementation backend avec des services comme Firebase Cloud Messaging ou Web Push API.');
+    closeAlertsModal();
+}
+
+// Dev function to simulate premium (for testing)
+function simulatePremium(enable = true) {
+    localStorage.setItem('weather_app_premium', enable.toString());
+    location.reload();
+}
+
+// Particle animations
+const particleStyles = document.createElement('style');
+particleStyles.textContent = `
+    .particle {
+        position: absolute;
+        pointer-events: none;
+    }
+    
+    .particle-rain {
+        width: 2px;
+        height: 20px;
+        background: linear-gradient(transparent, rgba(255, 255, 255, 0.6));
+        animation: rain-fall linear infinite;
+    }
+    
+    .particle-snow {
+        width: 8px;
+        height: 8px;
+        background: white;
+        border-radius: 50%;
+        opacity: 0.8;
+        animation: snow-fall linear infinite;
+    }
+    
+    .particle-sun {
+        width: 4px;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.6);
+        border-radius: 50%;
+        animation: float ease-in-out infinite;
+    }
+    
+    .particle-stars {
+        width: 3px;
+        height: 3px;
+        background: white;
+        border-radius: 50%;
+        animation: twinkle ease-in-out infinite;
+    }
+    
+    .particle-clouds {
+        width: 60px;
+        height: 30px;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 20px;
+        animation: cloud-drift linear infinite;
+    }
+    
+    @keyframes rain-fall {
+        0% { transform: translateY(-100vh); opacity: 0; }
+        10% { opacity: 1; }
+        90% { opacity: 1; }
+        100% { transform: translateY(100vh); opacity: 0; }
+    }
+    
+    @keyframes snow-fall {
+        0% { transform: translateY(-100vh) rotate(0deg); opacity: 0; }
+        10% { opacity: 1; }
+        90% { opacity: 1; }
+        100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+    }
+    
+    @keyframes float {
+        0%, 100% { transform: translateY(0) translateX(0); opacity: 0.4; }
+        50% { transform: translateY(-20px) translateX(10px); opacity: 0.8; }
+    }
+    
+    @keyframes twinkle {
+        0%, 100% { opacity: 0.3; transform: scale(1); }
+        50% { opacity: 1; transform: scale(1.2); }
+    }
+    
+    @keyframes cloud-drift {
+        0% { transform: translateX(-100px); }
+        100% { transform: translateX(100vw); }
+    }
+`;
+document.head.appendChild(particleStyles);
+
+// Initialize app
 document.addEventListener('DOMContentLoaded', () => {
     new WeatherApp();
 });
